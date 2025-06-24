@@ -1,39 +1,206 @@
-# Music-Playlist-Manager
-# Music Playlist Manager (C++ Project)
+Music-Playlist-Manager/
+│
+├── main.cpp             // Contains main function and menu
+├── playlist.h           // Class definitions (Song, DNode, Playlist)
+├── playlist.cpp         // Class implementations
+├── README.md            // Project documentation
 
-## 🎯 Overview
+// playlist.h
+#ifndef PLAYLIST_H
+#define PLAYLIST_H
 
-**Music Playlist Manager** is a C++ console application that allows users to manage their music playlist dynamically.  
-It uses core data structures like **Doubly Linked List**, **Stack**, and **Deque**, and implements custom **sorting** and **searching** algorithms to mimic features of a basic music player.
+#include <string>
+using namespace std;
 
----
+class Song {
+public:
+    string title;
+    string artist;
+    int duration;
 
-## 🚀 Features
+    Song(string t = "", string a = "", int d = 0);
+};
 
-- Add, remove, and display songs in the playlist
-- Search songs using linear and binary search
-- Sort songs alphabetically using Bubble Sort and Merge Sort
-- Manage recent user actions via Queue
-- Undo last operations using Stack
-- Circular navigation using Doubly Linked List
+struct DNode {
+    Song data;
+    DNode* prev;
+    DNode* next;
 
----
+    DNode(Song s);
+};
 
-## 🧠 Data Structures Used
+class Playlist {
+private:
+    DNode* head;
+    DNode* tail;
+    int size;
 
-- Doubly Linked List  
-- Stack  
-- Queue / Deque  
-- Binary Search Tree (optional for search)  
-- Sorting & Searching Algorithms
+    DNode* mergeSortRec(DNode* h);
+    DNode* split(DNode* h);
+    DNode* merge(DNode* left, DNode* right);
 
----
+public:
+    Playlist();
+    void addSong(Song s);
+    bool removeSong(string title);
+    void display();
+    void mergeSort();
+    DNode* getHead();
+    int getSize();
+};
 
-## 🔧 Project Structure
+#endif
+#include "playlist.h"
+#include <iostream>
+using namespace std;
 
-- `main.cpp` – Main logic and UI handling  
-- `playlist.cpp` – All playlist operations  
-- `utils.cpp` – Sorting, searching, helper functions
+// Song constructor
+Song::Song(string t, string a, int d) : title(t), artist(a), duration(d) {}
 
----
+// DNode constructor
+DNode::DNode(Song s) : data(s), prev(nullptr), next(nullptr) {}
 
+// Playlist constructor
+Playlist::Playlist() : head(nullptr), tail(nullptr), size(0) {}
+
+void Playlist::addSong(Song s) {
+    DNode* newNode = new DNode(s);
+    if (!head) head = tail = newNode;
+    else {
+        tail->next = newNode;
+        newNode->prev = tail;
+        tail = newNode;
+    }
+    size++;
+}
+
+bool Playlist::removeSong(string title) {
+    DNode* current = head;
+    while (current) {
+        if (current->data.title == title) {
+            if (current->prev) current->prev->next = current->next;
+            else head = current->next;
+
+            if (current->next) current->next->prev = current->prev;
+            else tail = current->prev;
+
+            delete current;
+            size--;
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
+
+void Playlist::display() {
+    DNode* current = head;
+    while (current) {
+        cout << "Title: " << current->data.title
+             << "\nArtist: " << current->data.artist
+             << "\nDuration: " << current->data.duration << "s\n\n";
+        current = current->next;
+    }
+}
+
+DNode* Playlist::getHead() { return head; }
+
+int Playlist::getSize() { return size; }
+
+void Playlist::mergeSort() {
+    head = mergeSortRec(head);
+    DNode* temp = head;
+    while (temp && temp->next) temp = temp->next;
+    tail = temp;
+}
+
+DNode* Playlist::mergeSortRec(DNode* h) {
+    if (!h || !h->next) return h;
+    DNode* mid = split(h);
+    DNode* left = mergeSortRec(h);
+    DNode* right = mergeSortRec(mid);
+    return merge(left, right);
+}
+
+DNode* Playlist::split(DNode* h) {
+    DNode* fast = h->next;
+    DNode* slow = h;
+    while (fast && fast->next) {
+        fast = fast->next->next;
+        slow = slow->next;
+    }
+    DNode* mid = slow->next;
+    slow->next = nullptr;
+    if (mid) mid->prev = nullptr;
+    return mid;
+}
+
+DNode* Playlist::merge(DNode* left, DNode* right) {
+    if (!left) return right;
+    if (!right) return left;
+
+    if (left->data.title < right->data.title) {
+        left->next = merge(left->next, right);
+        if (left->next) left->next->prev = left;
+        left->prev = nullptr;
+        return left;
+    } else {
+        right->next = merge(left, right->next);
+        if (right->next) right->next->prev = right;
+        right->prev = nullptr;
+        return right;
+    }
+}
+#include "playlist.h"
+#include <iostream>
+using namespace std;
+
+int main() {
+    Playlist playlist;
+    int choice;
+    string title, artist;
+    int duration;
+
+    do {
+        cout << "\n===== Music Playlist Manager =====\n";
+        cout << "1. Add Song\n2. Remove Song\n3. Display Playlist\n4. Sort Playlist\n0. Exit\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Enter Title: ";
+                cin.ignore();
+                getline(cin, title);
+                cout << "Enter Artist: ";
+                getline(cin, artist);
+                cout << "Enter Duration (in seconds): ";
+                cin >> duration;
+                playlist.addSong(Song(title, artist, duration));
+                break;
+            case 2:
+                cout << "Enter title to remove: ";
+                cin.ignore();
+                getline(cin, title);
+                if (playlist.removeSong(title))
+                    cout << "Song removed successfully.\n";
+                else
+                    cout << "Song not found.\n";
+                break;
+            case 3:
+                playlist.display();
+                break;
+            case 4:
+                playlist.mergeSort();
+                cout << "Playlist sorted.\n";
+                break;
+            case 0:
+                cout << "Exiting...\n";
+                break;
+            default:
+                cout << "Invalid choice.\n";
+        }
+    } while (choice != 0);
+
+    return 0;
+}
